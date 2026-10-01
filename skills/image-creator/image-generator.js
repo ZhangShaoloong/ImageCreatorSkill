@@ -287,6 +287,8 @@ function parseArgs() {
     } else if (arg === '--multi-angle' && args[i + 1]) {
       options.multiAngle = true;
       options.angleCount = parseInt(args[++i]);
+    } else if (arg === '--model' && args[i + 1]) {
+      options.model = args[++i];
     } else if (!arg.startsWith('--')) {
       prompt += arg + ' ';
     }
@@ -345,6 +347,7 @@ async function main() {
     console.log('  --no-hands     Disable hand rendering');
     console.log('  --fingers      Enhanced finger detail');
     console.log('  --multi-angle N Generate N different angles');
+    console.log('  --model ID       生成模型 (default: agnes-image-2.1-flash)');
     console.log('  --setup        Configure API key');
     console.log('  --test         Run tests');
     process.exit(1);
