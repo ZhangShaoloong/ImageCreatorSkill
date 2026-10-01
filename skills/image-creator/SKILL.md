@@ -33,6 +33,24 @@ This will:
 
 ## Usage Patterns
 
+### 模式判定(两条路径)
+
+- **快速路径**:指令里含**任意 flag**(`--style`、`--aspect`、`--width`、`--multi-angle`、`--model` 等)→ 不弹向导,未给的值用默认,直接生成。
+- **交互向导**:只有场景描述、**无任何 flag**,或**空的 `/image`** → 走下方"交互向导"流程。
+
+判定口诀:**有 flag = 快速;无 flag = 向导。**
+
+### 参数 → CLI flag 映射
+
+| 向导项 | flag | 默认 |
+|--------|------|------|
+| 风格 | `--style` | photorealistic |
+| 比例 | `--aspect` | 16:9 |
+| 自定义尺寸 | `--width N --height N` | 1920×1080 |
+| 手部 | `--no-hands` / `--fingers` | 显示 |
+| 多角度 | `--multi-angle N` | 1 |
+| 模型 | `--model <id>` | agnes-image-2.1-flash |
+
 ### Basic Generation (All Defaults)
 
 ```
