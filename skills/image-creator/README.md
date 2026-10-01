@@ -59,8 +59,7 @@ node "E:\AI\Make Skill\skills\image-creator\image-generator.js" --setup
 - `--fingers`: 增强手指细节（默认显示手部但细节一般）
 
 ### 多角度生成
-- `--multi-angle N`: 生成 N 个不同角度的图片
-- 需要配合 `--angles N` 使用（可选，默认3个角度）
+- `--multi-angle N`: 生成 N 个不同角度的图片（N ≥ 1，默认单角度）
 
 ## 工作流程
 

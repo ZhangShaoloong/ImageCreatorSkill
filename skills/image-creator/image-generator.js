@@ -32,6 +32,21 @@ const API_BASE = 'https://api.agnes-ai.cn/v1';
 const VALID_STYLES = ['photorealistic', 'cartoon-2d', 'cartoon-3d'];
 const VALID_ASPECTS = ['16:9', '4:3', '1:1', '9:16'];
 
+// Distinct English view modifiers for multi-angle generation.
+// Each iteration appends one to the prompt so the N images differ visually.
+const ANGLE_MODIFIERS = [
+  'front view',
+  'side view',
+  'top-down view',
+  'three-quarter view',
+  'close-up view',
+  'wide shot',
+  'back view',
+  'low-angle shot',
+  'high-angle shot',
+  'overhead view'
+];
+
 /**
  * Setup API key configuration
  */
@@ -146,8 +161,12 @@ function getApiKey() {
 
 /**
  * Save image to local directory
+ * @param {Buffer} imageData - Raw image bytes
+ * @param {string} prompt - Original prompt (used for filename stem)
+ * @param {string} outputDir - Directory to save into
+ * @param {number} [angleIndex] - 1-based angle index; when supplied appends _angle_N to filename
  */
-function saveImage(imageData, prompt, outputDir = './output') {
+function saveImage(imageData, prompt, outputDir = './output', angleIndex) {
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -156,7 +175,8 @@ function saveImage(imageData, prompt, outputDir = './output') {
   // Generate filename with timestamp
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safePrompt = prompt.replace(/[^\p{L}\p{N}\s-]/gu, '').substring(0, 50).replace(/\s+/g, '_');
-  const filename = `${timestamp}_${safePrompt}.jpg`;
+  const angleSuffix = angleIndex ? `_angle_${angleIndex}` : '';
+  const filename = `${timestamp}_${safePrompt}${angleSuffix}.jpg`;
   const filepath = path.join(outputDir, filename);
 
   // Save image data
@@ -170,6 +190,12 @@ function saveImage(imageData, prompt, outputDir = './output') {
 
 /**
  * Main generation function
+ *
+ * Return shape:
+ *   single image (multiAngle false or angleCount <= 1):
+ *     { path: string, filename: string }   (same as before — callers unchanged)
+ *   multi-angle (multiAngle true AND angleCount > 1):
+ *     [{ path: string, filename: string }, ...]   array of length angleCount
  */
 async function generateImage(prompt, options = {}) {
   // Merge with defaults
@@ -187,9 +213,31 @@ async function generateImage(prompt, options = {}) {
     throw new Error('AGNES_API_KEY not configured. Run: node image-generator.js --setup');
   }
 
-  // Build prompt
+  const isMultiAngle = config.multiAngle && config.angleCount > 1;
   const fullPrompt = buildPrompt(prompt, config);
 
+  if (isMultiAngle) {
+    console.log(`\nGenerating ${config.angleCount} multi-angle images...`);
+    console.log(`  Model: ${config.model}`);
+    console.log(`  Size: ${config.width}x${config.height}`);
+    console.log(`  Style: ${config.style}`);
+    console.log(`  Output: ${config.outputFormat}`);
+    console.log(`  Prompt: ${fullPrompt.substring(0, 100)}...`);
+
+    const results = [];
+    for (let i = 0; i < config.angleCount; i++) {
+      const modifier = ANGLE_MODIFIERS[i % ANGLE_MODIFIERS.length];
+      const anglePrompt = `${fullPrompt}, ${modifier}`;
+      console.log(`\n  [angle ${i + 1}/${config.angleCount}] ${modifier}`);
+      const response = await callApi(apiKey, anglePrompt, config);
+      const result = saveImage(response.imageData, prompt, './output', i + 1);
+      results.push(result);
+      console.log(`  ✓ Saved: ${result.path}`);
+    }
+    return results;
+  }
+
+  // Single-image path — byte-for-byte identical to pre-fix behaviour
   console.log(`\nGenerating image...`);
   console.log(`  Model: ${config.model}`);
   console.log(`  Size: ${config.width}x${config.height}`);
@@ -197,10 +245,7 @@ async function generateImage(prompt, options = {}) {
   console.log(`  Output: ${config.outputFormat}`);
   console.log(`  Prompt: ${fullPrompt.substring(0, 100)}...`);
 
-  // Call API
   const response = await callApi(apiKey, fullPrompt, config);
-
-  // Save result
   const result = saveImage(response.imageData, prompt);
 
   console.log(`\n✓ Image saved: ${result.path}`);

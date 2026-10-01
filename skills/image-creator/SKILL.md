@@ -104,8 +104,7 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 | Style | `--style` | photorealistic | Art style: photorealistic, cartoon-2d, cartoon-3d |
 | Show Hands | `--no-hands` | true | Omit to disable hand rendering |
 | Enhanced Fingers | `--fingers` | false | Omit for standard hand detail |
-| Multi-Angle | `--multi-angle N` | false | Generate N different views |
-| Angle Count | `--angles N` | 3 | Number of angles (requires --multi-angle) |
+| Multi-Angle | `--multi-angle N` | 单角度（默认） | Generate N different views (off by default; set N ≥ 1 to enable) |
 
 ### Style Options
 
@@ -154,7 +153,7 @@ Key functions:
 
 1. **Skipping setup**: Always run `/image-setup` before first use
 2. **Invalid aspect ratio**: Use predefined ratios or set both width and height
-3. **Missing multi-angle flag**: Use `--multi-angle` before `--angles`
+3. **Missing multi-angle flag**: Use `--multi-angle N` where N is the number of views desired
 4. **Assuming online gallery**: Images saved locally only, no cloud gallery
 
 ## Examples
@@ -167,7 +166,7 @@ Result: 1080×1920 portrait, photorealistic style, hands shown
 
 ### Example 2: Multi-Angle Character
 ```
-/image 一个机器人站在未来城市 --multi-angle --angles 5 --style cartoon-3d
+/image 一个机器人站在未来城市 --multi-angle 5 --style cartoon-3d
 ```
 Result: 5 different angles of robot, 3D cartoon style, default 16:9
 
