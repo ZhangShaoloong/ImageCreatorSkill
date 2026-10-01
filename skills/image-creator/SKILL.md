@@ -70,19 +70,29 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 /image [prompt] --width 1024 --height 1024 --style cartoon-2d --no-hands --multi-angle 4
 ```
 
-### Interactive Mode
+### 交互向导(无 flag 时执行)
 
-```
-/image
-```
+先收场景描述,再用 `AskUserQuestion` 逐问下列参数(每问含"接受默认";任一问允许"跳过,全用默认直接生成")。
 
-Skill will prompt for:
-- Scene description
-- Resolution (or accept default)
-- Aspect ratio (or accept default)
-- Style (or accept default)
-- Hand detection preference
-- Multi-angle generation
+**第 0 步 场景描述**(自由输入,非按钮)
+- 用户已给描述 → 直接进第 1 问。
+- 空 `/image` → 先问:"请描述你想生成的画面(例:一个现代风格的别墅,绿树环绕)"。
+
+**第 1 问 风格** — 选项:photorealistic(默认) / cartoon-2d / cartoon-3d
+
+**第 2 问 比例/尺寸** — 选项:16:9(默认) / 4:3 / 1:1 / 9:16 / 自定义 w×h
+- 选"自定义"时追问 width、height(合法 256–8192)。
+
+**第 3 问 手部/手指** — 选项:显示(默认) / 不显示 / 增强手指细节
+
+**第 4 问 多角度** — 选项:单角度(默认) / 多角度 N 个
+- 选"多角度"时追问 N(≥1)。
+
+**第 5 问 模型** — 选项:agnes-image-2.1-flash(默认) / agnes-image-2.5-flash / 其他(手填模型 ID)
+
+**第 6 问 确认** — 汇总全部参数,选项:直接生成 / 改一项 / 取消
+
+收集完 → 按映射表拼 flags → 调 `generateImage(prompt, options)` → 返回保存路径。
 
 ## Parameters Reference
 
