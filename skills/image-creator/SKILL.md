@@ -48,7 +48,7 @@ This will:
 | 比例 | `--aspect` | 16:9 |
 | 自定义尺寸 | `--width N --height N` | 1920×1080 |
 | 手部 | `--no-hands` / `--fingers` | 显示 |
-| 多角度 | `--multi-angle N` | 1 |
+| 多角度 | `--multi-angle N` | 单角度（默认） |
 | 模型 | `--model <id>` | agnes-image-2.1-flash |
 
 ### Basic Generation (All Defaults)
