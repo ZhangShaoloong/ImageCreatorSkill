@@ -22,8 +22,8 @@
 
 | 文件 | 职责 | 改动 |
 |---|---|---|
-| `C:/Users/x1c/.claude/skills/image-creator/SKILL.md` | Claude 行为脚本 | 新增"交互向导"章节 + 双模式判定 + 参数映射表 |
-| `C:/Users/x1c/.claude/skills/image-creator/image-generator.js` | 生成执行 | `parseArgs` 加 `--model` |
+| `E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md` | Claude 行为脚本 | 新增"交互向导"章节 + 双模式判定 + 参数映射表 |
+| `E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/image-generator.js` | 生成执行 | `parseArgs` 加 `--model` |
 | `docs/superpowers/specs/2026-10-01-image-creator-interactive-wizard-design.md` | 规格 | 已定稿,不改 |
 | `docs/superpowers/plans/2026-10-01-image-creator-interactive-wizard.md` | 本计划 | 新建 |
 
@@ -32,7 +32,7 @@
 ### Task 1: 给 parseArgs 增加 `--model` 解析
 
 **Files:**
-- Modify: `C:/Users/x1c/.claude/skills/image-creator/image-generator.js`(parseArgs,当前在 `--multi-angle` 分支之后、`!arg.startsWith('--')` 之前)
+- Modify: `E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/image-generator.js`(parseArgs,当前在 `--multi-angle` 分支之后、`!arg.startsWith('--')` 之前)
 
 **Interfaces:**
 - Consumes: 已有 `DEFAULTS.model`、`callApi` 里的 `options.model || DEFAULTS.model`。
@@ -59,8 +59,8 @@
 
 Run:
 ```bash
-node -e "const m=require('C:/Users/x1c/.claude/skills/image-creator/image-generator.js');process.argv=['','--setup'];" 2>&1 | head -1
-node "C:/Users/x1c/.claude/skills/image-creator/image-generator.js" 2>&1 | grep -- '--model'
+node -e "const m=require('E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/image-generator.js');process.argv=['','--setup'];" 2>&1 | head -1
+node "E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/image-generator.js" 2>&1 | grep -- '--model'
 ```
 Expected: 第二条命令输出包含 `--model ID       生成模型 (default: agnes-image-2.1-flash)`。
 
@@ -73,7 +73,7 @@ Expected: 第二条命令输出包含 `--model ID       生成模型 (default: a
 ### Task 2: SKILL.md 双模式判定 + 参数映射表
 
 **Files:**
-- Modify: `C:/Users/x1c/.claude/skills/image-creator/SKILL.md`("Usage Patterns" 段落附近)
+- Modify: `E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md`("Usage Patterns" 段落附近)
 
 **Interfaces:**
 - Consumes: 现有 "Basic Generation" / "Custom Parameters" / "Interactive Mode" 三段。
@@ -109,7 +109,7 @@ Expected: 第二条命令输出包含 `--model ID       生成模型 (default: a
 
 Run:
 ```bash
-grep -c "判定口诀" "C:/Users/x1c/.claude/skills/image-creator/SKILL.md"
+grep -c "判定口诀" "E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md"
 ```
 Expected: 输出 `1`(判定规则已插入,且唯一)。
 
@@ -118,7 +118,7 @@ Expected: 输出 `1`(判定规则已插入,且唯一)。
 ### Task 3: SKILL.md 交互向导章节(第 0–6 问)
 
 **Files:**
-- Modify: `C:/Users/x1c/.claude/skills/image-creator/SKILL.md`(原 "Interactive Mode" 段落改写为完整向导)
+- Modify: `E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md`(原 "Interactive Mode" 段落改写为完整向导)
 
 **Interfaces:**
 - Consumes: Task 2 的判定规则与 flag 映射;`image-generator.js` 的 `generateImage(prompt, options)`。
@@ -158,7 +158,7 @@ Expected: 输出 `1`(判定规则已插入,且唯一)。
 
 Run:
 ```bash
-grep -n "第 0 步\|第 6 问\|交互向导" "C:/Users/x1c/.claude/skills/image-creator/SKILL.md"
+grep -n "第 0 步\|第 6 问\|交互向导" "E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md"
 ```
 Expected: 同时命中 "交互向导"、"第 0 步"、"第 6 问"。
 
@@ -166,7 +166,7 @@ Expected: 同时命中 "交互向导"、"第 0 步"、"第 6 问"。
 
 Run:
 ```bash
-grep -n "model" "C:/Users/x1c/.claude/skills/image-creator/SKILL.md"
+grep -n "model" "E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/SKILL.md"
 ```
 Expected: 映射表与向导第 5 问都提到 `--model` / 模型 ID,措辞一致。
 
@@ -184,7 +184,7 @@ Expected: 映射表与向导第 5 问都提到 `--model` / 模型 ID,措辞一�
 
 Run:
 ```bash
-node -e "const g=require('C:/Users/x1c/.claude/skills/image-creator/image-generator.js');g.generateImage('a modern villa, green trees, courtyard',{model:'agnes-image-2.1-flash'}).then(r=>console.log('SAVED:'+r.path));"
+node -e "const g=require('E:/AI/Make Skill/ImageCreatorSkill/skills/image-creator/image-generator.js');g.generateImage('a modern villa, green trees, courtyard',{model:'agnes-image-2.1-flash'}).then(r=>console.log('SAVED:'+r.path));"
 ```
 Expected: 打印 `SAVED:` + 一个 `.jpg` 路径;`ls output/` 新增该文件。
 
