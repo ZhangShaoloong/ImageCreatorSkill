@@ -22,7 +22,8 @@ const DEFAULTS = {
   multiAngle: false,
   angleCount: 3,
   model: 'agnes-image-2.1-flash',
-  outputFormat: 'jpeg'
+  outputFormat: 'jpeg',
+  outputDir: './output'
 };
 
 // API configuration
@@ -166,7 +167,7 @@ function getApiKey() {
  * @param {string} outputDir - Directory to save into
  * @param {number} [angleIndex] - 1-based angle index; when supplied appends _angle_N to filename
  */
-function saveImage(imageData, prompt, outputDir = './output', angleIndex) {
+function saveImage(imageData, prompt, outputDir, angleIndex) {
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -222,6 +223,7 @@ async function generateImage(prompt, options = {}) {
     console.log(`  Size: ${config.width}x${config.height}`);
     console.log(`  Style: ${config.style}`);
     console.log(`  Output: ${config.outputFormat}`);
+    console.log(`  Dir: ${config.outputDir}`);
     console.log(`  Prompt: ${fullPrompt.substring(0, 100)}...`);
 
     const results = [];
@@ -230,7 +232,7 @@ async function generateImage(prompt, options = {}) {
       const anglePrompt = `${fullPrompt}, ${modifier}`;
       console.log(`\n  [angle ${i + 1}/${config.angleCount}] ${modifier}`);
       const response = await callApi(apiKey, anglePrompt, config);
-      const result = saveImage(response.imageData, prompt, './output', i + 1);
+      const result = saveImage(response.imageData, prompt, config.outputDir, i + 1);
       results.push(result);
       console.log(`  ✓ Saved: ${result.path}`);
     }
@@ -243,10 +245,11 @@ async function generateImage(prompt, options = {}) {
   console.log(`  Size: ${config.width}x${config.height}`);
   console.log(`  Style: ${config.style}`);
   console.log(`  Output: ${config.outputFormat}`);
+  console.log(`  Dir: ${config.outputDir}`);
   console.log(`  Prompt: ${fullPrompt.substring(0, 100)}...`);
 
   const response = await callApi(apiKey, fullPrompt, config);
-  const result = saveImage(response.imageData, prompt);
+  const result = saveImage(response.imageData, prompt, config.outputDir);
 
   console.log(`\n✓ Image saved: ${result.path}`);
   return result;
@@ -334,6 +337,8 @@ function parseArgs() {
       options.angleCount = parseInt(args[++i]);
     } else if (arg === '--model' && args[i + 1]) {
       options.model = args[++i];
+    } else if (arg === '--output' && args[i + 1]) {
+      options.outputDir = args[++i];
     } else if (!arg.startsWith('--')) {
       prompt += arg + ' ';
     }
@@ -393,6 +398,7 @@ async function main() {
     console.log('  --fingers      Enhanced finger detail');
     console.log('  --multi-angle N Generate N different angles');
     console.log('  --model ID       生成模型 (default: agnes-image-2.1-flash)');
+    console.log('  --output DIR     Output directory (default: ./output)');
     console.log('  --setup        Configure API key');
     console.log('  --test         Run tests');
     process.exit(1);

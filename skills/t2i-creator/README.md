@@ -1,4 +1,4 @@
-# Image Creator Skill 使用指南
+# T2I Creator Skill 使用指南
 
 ## 快速开始
 
@@ -7,7 +7,7 @@
 运行配置命令设置 API key：
 
 ```bash
-node "E:\AI\Make Skill\skills\image-creator\image-generator.js" --setup
+node "E:\AI\Make Skill\skills\t2i-creator\image-generator.js" --setup
 ```
 
 输入你的 AGNES_API_KEY，系统将自动保存到 `.claude/settings.local.json`
@@ -16,22 +16,22 @@ node "E:\AI\Make Skill\skills\image-creator\image-generator.js" --setup
 
 #### 基础用法（使用默认参数）
 ```
-/image 一只橘猫在阳光下的草地上打盹
+/t2i 一只橘猫在阳光下的草地上打盹
 ```
 
 #### 自定义参数
 ```
-/image 一个未来城市景观 --width 1920 --height 1080 --style cartoon-3d
+/t2i 一个未来城市景观 --width 1920 --height 1080 --style cartoon-3d
 ```
 
 #### 多角度生成
 ```
-/image 一个机器人站在街道上 --multi-angle 4 --style cartoon-3d
+/t2i 一个机器人站在街道上 --multi-angle 4 --style cartoon-3d
 ```
 
 #### 不显示手部
 ```
-/image 一只手拿着苹果 --no-hands
+/t2i 一只手拿着苹果 --no-hands
 ```
 
 ## 参数说明
@@ -61,15 +61,19 @@ node "E:\AI\Make Skill\skills\image-creator\image-generator.js" --setup
 ### 多角度生成
 - `--multi-angle N`: 生成 N 个不同角度的图片（N ≥ 1，默认单角度）
 
+### 输出目录 (--output)
+- 默认: `./output`（项目根目录下）
+- 示例: `--output ./t2is` 或 `--output C:\Users\x1c\Pictures`
+
 ## 工作流程
 
 ### 交互式模式
-直接运行 `/image`，系统会引导你完成所有参数设置
+直接运行 `/t2i`，系统会引导你完成所有参数设置
 
 ### 非交互式模式
 在提示中直接提供所有参数:
 ```
-/image [场景描述] --参数1 --参数2 ...
+/t2i [场景描述] --参数1 --参数2 ...
 ```
 
 ## 保存位置
@@ -112,6 +116,10 @@ A: 使用 `--multi-angle 3` 或更多角度数
 如需添加真实 API 调用，编辑 `image-generator.js` 中的 `callApi()` 函数
 
 ## 更新日志
+
+### v1.1.0 (2026-10-04)
+- 重命名 skill：`image-creator` → `t2i-creator`（斜杠命令 `/image` → `/t2i`）
+- 新增 `--output <dir>` 输出目录参数
 
 ### v1.0.0 (2026-10-01)
 - 初始版本

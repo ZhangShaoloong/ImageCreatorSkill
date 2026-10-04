@@ -1,20 +1,20 @@
 ---
-name: image-creator
+name: t2i-creator
 description: Use when generating images with agnes-image-2.1-flash model, supporting configurable resolution, aspect ratio, style, hand detection, and multi-angle generation
 ---
 
-# Image Creator
+# T2I Creator
 
 ## Overview
 
-A Claude Code skill for generating images using the agnes-image-2.1-flash model. Provides configurable parameters including resolution, aspect ratio, artistic style, hand/finger detection, and multi-angle generation.
+A Claude Code skill for text-to-image generation using the agnes-image-2.1-flash model. Provides configurable parameters including resolution, aspect ratio, artistic style, hand/finger detection, and multi-angle generation.
 
 ## When to Use
 
 - User requests image generation from text description
 - Need to create visual assets with specific parameters
 - Generating illustrations, concept art, or reference images
-- Required: API key configured (run `/image-setup` first time)
+- Required: API key configured (run `/t2i-setup` first time)
 
 **NOT for:** Photo editing, image manipulation, or non-agnes models
 
@@ -23,7 +23,7 @@ A Claude Code skill for generating images using the agnes-image-2.1-flash model.
 First-time users must configure API key:
 
 ```
-/image-setup
+/t2i-setup
 ```
 
 This will:
@@ -36,7 +36,7 @@ This will:
 ### 模式判定(两条路径)
 
 - **快速路径**:指令里含**任意 flag**(`--style`、`--aspect`、`--width`、`--multi-angle`、`--model` 等)→ 不弹向导,未给的值用默认,直接生成。
-- **交互向导**:只有场景描述、**无任何 flag**,或**空的 `/image`** → 走下方"交互向导"流程。
+- **交互向导**:只有场景描述、**无任何 flag**,或**空的 `/t2i`** → 走下方"交互向导"流程。
 
 判定口诀:**有 flag = 快速;无 flag = 向导。**
 
@@ -50,16 +50,17 @@ This will:
 | 手部 | `--no-hands` / `--fingers` | 显示 |
 | 多角度 | `--multi-angle N` | 单角度（默认） |
 | 模型 | `--model <id>` | agnes-image-2.1-flash |
+| 输出目录 | `--output <dir>` | ./output |
 
 ### Basic Generation (All Defaults)
 
 ```
-/image [scene description]
+/t2i [scene description]
 ```
 
 Example:
 ```
-/image 一只橘猫在阳光下的草地上打盹
+/t2i 一只橘猫在阳光下的草地上打盹
 ```
 
 Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
@@ -67,7 +68,7 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 ### Custom Parameters
 
 ```
-/image [prompt] --width 1024 --height 1024 --style cartoon-2d --no-hands --multi-angle 4
+/t2i [prompt] --width 1024 --height 1024 --style cartoon-2d --no-hands --multi-angle 4
 ```
 
 ### 交互向导(无 flag 时执行)
@@ -76,7 +77,7 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 
 **第 0 步 场景描述**(自由输入,非按钮)
 - 用户已给描述 → 进第 0.5 步。
-- 空 `/image` → 先问:"请描述你想生成的画面(例:一个现代风格的别墅,绿树环绕)"。
+- 空 `/t2i` → 先问:"请描述你想生成的画面(例:一个现代风格的别墅,绿树环绕)"。
 
 **第 0.5 步 头脑风暴(不可跳过)**
 收到描述后,Claude 主动引导用户丰富画面细节,多轮对话,直到用户说"够了""完成"或"不用了"为止。
@@ -118,6 +119,7 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 | Show Hands | `--no-hands` | true | Omit to disable hand rendering |
 | Enhanced Fingers | `--fingers` | false | Omit for standard hand detail |
 | Multi-Angle | `--multi-angle N` | 单角度（默认） | Generate N different views (off by default; set N ≥ 1 to enable) |
+| Output Dir | `--output` | ./output | Directory where images are saved |
 
 ### Style Options
 
@@ -137,7 +139,7 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 
 ### Missing API Key
 ```
-Error: AGNES_API_KEY not configured. Run: /image-setup
+Error: AGNES_API_KEY not configured. Run: /t2i-setup
 ```
 
 ### API Timeout
@@ -149,7 +151,7 @@ Error: AGNES_API_KEY not configured. Run: /image-setup
 - Error: "Invalid parameter: --style must be photorealistic, cartoon-2d, or cartoon-3d"
 
 ### File Save Failure
-- Try alternative path: `./output/`, `./images/`, `C:\Users\<user>\Pictures\`
+- Try alternative path: `./output/`, `./t2is/`, `C:\Users\<user>\Pictures\`
 - Notify user with full path and fallback location
 
 ## Implementation
@@ -164,7 +166,7 @@ Key functions:
 
 ## Common Mistakes
 
-1. **Skipping setup**: Always run `/image-setup` before first use
+1. **Skipping setup**: Always run `/t2i-setup` before first use
 2. **Invalid aspect ratio**: Use predefined ratios or set both width and height
 3. **Missing multi-angle flag**: Use `--multi-angle N` where N is the number of views desired
 4. **Assuming online gallery**: Images saved locally only, no cloud gallery
@@ -173,19 +175,19 @@ Key functions:
 
 ### Example 1: Basic Portrait
 ```
-/image 一位女科学家在实验室工作 --aspect 9:16 --style photorealistic
+/t2i 一位女科学家在实验室工作 --aspect 9:16 --style photorealistic
 ```
 Result: 1080×1920 portrait, photorealistic style, hands shown
 
 ### Example 2: Multi-Angle Character
 ```
-/image 一个机器人站在未来城市 --multi-angle 5 --style cartoon-3d
+/t2i 一个机器人站在未来城市 --multi-angle 5 --style cartoon-3d
 ```
 Result: 5 different angles of robot, 3D cartoon style, default 16:9
 
 ### Example 3: No Hands
 ```
-/image 一个抽象的艺术装置 --no-hands --style cartoon-2d
+/t2i 一个抽象的艺术装置 --no-hands --style cartoon-2d
 ```
 Result: 1920×1080, 2D cartoon, no hands rendered
 
