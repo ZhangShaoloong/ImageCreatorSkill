@@ -1,0 +1,9 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "i2i-creator",
+  "version": "0.1.0",
+  "description": "Image-to-image generation skill using agnes-image-2.1-flash model",
+  "skills": [
+    "./"
+  ]
+}
