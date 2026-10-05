@@ -6,3 +6,6 @@ output/
 
 # SDD 工作区（草稿/台账）
 .superpowers/
+
+# .env 含真实密钥，不进版本库（.env.example 是模板，保留）
+.env

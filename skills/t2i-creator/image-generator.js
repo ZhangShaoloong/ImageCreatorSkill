@@ -1,15 +1,22 @@
 /**
- * Image Generator for agnes-image-2.1-flash model
+ * Vendor-agnostic Image Generator (OpenAI-compatible image API)
+ *
+ * Defaults to the agnes-image-2.1-flash model on https://api.agnes-ai.cn/v1,
+ * but every vendor-specific value (model, base URL, API key) is resolved at
+ * runtime from CLI flags > environment variables > settings.local.json >
+ * built-in agnes defaults, so no code change is needed to target another
+ * compatible backend.
  *
  * Usage:
  *   node image-generator.js "prompt" [--options]
- *   node image-generator.js --setup
+ *   node image-generator.js --setup          (interactive, or --key <val>)
  *   node image-generator.js --test
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const readline = require('readline');
 
 // Default configuration
 const DEFAULTS = {
@@ -22,12 +29,14 @@ const DEFAULTS = {
   multiAngle: false,
   angleCount: 3,
   model: 'agnes-image-2.1-flash',
+  apiBase: 'https://api.agnes-ai.cn/v1',
   outputFormat: 'jpeg',
   outputDir: './output'
 };
 
-// API configuration
-const API_BASE = 'https://api.agnes-ai.cn/v1';
+// Vendor-agnostic. Endpoints are OpenAI-compatible paths appended to apiBase;
+// the base URL itself is resolved at runtime (see resolveConfig) so the skill
+// works against agnes by default or any compatible backend.
 
 // Valid options
 const VALID_STYLES = ['photorealistic', 'cartoon-2d', 'cartoon-3d'];
@@ -50,12 +59,19 @@ const ANGLE_MODIFIERS = [
 
 /**
  * Setup API key configuration
+ *
+ * Interactively prompts for a real API key on stdin (no echo). Pass `key`
+ * (from `--key`) to skip the prompt. The key is persisted to
+ * `~/.claude/settings.local.json` under `env.AGNES_API_KEY`.
  */
-async function setupApiKey() {
+async function setupApiKey({ key } = {}) {
   console.log('\n=== Image Generator Setup ===\n');
 
-  // For testing, use a mock API key
-  const apiKey = 'mock-test-api-key-' + Date.now();
+  let apiKey = key;
+
+  if (!apiKey || apiKey.trim() === '') {
+    apiKey = await promptForKey('Enter your API key: ');
+  }
 
   if (!apiKey || apiKey.trim() === '') {
     console.error('Error: API key cannot be empty');
@@ -82,6 +98,29 @@ async function setupApiKey() {
   console.log('\n✓ API key configured successfully!');
   console.log('  Saved to:', settingsPath);
   console.log('\nYou can now use the image generator.');
+}
+
+/**
+ * Read a secret from stdin without echoing. If stdin is not a TTY (e.g. piped),
+ * reads one line instead.
+ */
+function promptForKey(promptText) {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY === false) {
+      // Piped input: read first line silently.
+      let data = '';
+      process.stdin.once('data', (chunk) => { data += chunk.toString(); });
+      process.stdin.once('end', () => resolve(data.trim()));
+      // Ensure the stream drains even if there's no trailing newline.
+      return;
+    }
+
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    rl.question(promptText, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
 }
 
 // Style → OpenAI-compatible image style modifiers
@@ -143,9 +182,9 @@ function validateParameters(options) {
 }
 
 /**
- * Get API key from settings
+ * Read the persisted API key from settings (third priority level).
  */
-function getApiKey() {
+function readSettingsApiKey() {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.local.json');
 
   if (!fs.existsSync(settingsPath)) {
@@ -158,6 +197,71 @@ function getApiKey() {
   } catch (e) {
     return null;
   }
+}
+
+/**
+ * Back-compat alias for readSettingsApiKey.
+ */
+function getApiKey() {
+  return readSettingsApiKey();
+}
+
+/**
+ * Load a .env-style file into process.env. Lines are KEY=VALUE (or KEY="VALUE").
+ * Blank lines and # comments are ignored. Only sets keys that are not already
+ * present in process.env so real env vars always win.
+ *
+ * @param {string} file - Path to the file to load
+ * @returns {{loaded: string[], skipped: string[]}}
+ */
+function loadEnvFile(file) {
+  if (!fs.existsSync(file)) {
+    throw new Error(`Env file not found: ${file}`);
+  }
+  const content = fs.readFileSync(file, 'utf8');
+  const loaded = [];
+  const skipped = [];
+  for (const raw of content.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 1) continue;
+    const k = line.slice(0, eq).trim();
+    let v = line.slice(eq + 1).trim();
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    if (process.env[k] === undefined) {
+      process.env[k] = v;
+      loaded.push(k);
+    } else {
+      skipped.push(k);
+    }
+  }
+  return { loaded, skipped };
+}
+
+/**
+ * Resolve vendor-agnostic runtime config.
+ *
+ * Precedence (highest → lowest):
+ *   CLI options (options.model/base/key)
+ *   > process.env (IMAGE_MODEL / IMAGE_API_BASE / AGNES_API_BASE / IMAGE_API_KEY / AGNES_API_KEY)
+ *   > settings.local.json (AGNES_API_KEY)
+ *   > built-in agnes defaults
+ *
+ * @returns {{model: string, apiBase: string, apiKey: (string|null)}}
+ */
+function resolveConfig(options = {}) {
+  const env = process.env;
+
+  const model = options.model || env.IMAGE_MODEL || DEFAULTS.model;
+
+  const apiBase = options.base || env.IMAGE_API_BASE || env.AGNES_API_BASE || DEFAULTS.apiBase;
+
+  const apiKey = options.key || env.IMAGE_API_KEY || env.AGNES_API_KEY || readSettingsApiKey() || null;
+
+  return { model, apiBase, apiKey };
 }
 
 /**
@@ -208,10 +312,15 @@ async function generateImage(prompt, options = {}) {
     throw new Error(`Invalid parameters:\n  ${errors.join('\n  ')}`);
   }
 
+  // Resolve vendor-agnostic config (CLI > env > settings > built-in agnes default)
+  const resolved = resolveConfig(config);
+
   // Check API key
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('AGNES_API_KEY not configured. Run: node image-generator.js --setup');
+  if (!resolved.apiKey) {
+    throw new Error(
+      'API key not configured. Set IMAGE_API_KEY (or AGNES_API_KEY), ' +
+      'or run: node image-generator.js --setup'
+    );
   }
 
   const isMultiAngle = config.multiAngle && config.angleCount > 1;
@@ -219,7 +328,8 @@ async function generateImage(prompt, options = {}) {
 
   if (isMultiAngle) {
     console.log(`\nGenerating ${config.angleCount} multi-angle images...`);
-    console.log(`  Model: ${config.model}`);
+    console.log(`  Model: ${resolved.model}`);
+    console.log(`  Base:  ${resolved.apiBase}`);
     console.log(`  Size: ${config.width}x${config.height}`);
     console.log(`  Style: ${config.style}`);
     console.log(`  Output: ${config.outputFormat}`);
@@ -231,7 +341,7 @@ async function generateImage(prompt, options = {}) {
       const modifier = ANGLE_MODIFIERS[i % ANGLE_MODIFIERS.length];
       const anglePrompt = `${fullPrompt}, ${modifier}`;
       console.log(`\n  [angle ${i + 1}/${config.angleCount}] ${modifier}`);
-      const response = await callApi(apiKey, anglePrompt, config);
+      const response = await callApi(resolved.apiKey, anglePrompt, config, resolved.apiBase);
       const result = saveImage(response.imageData, prompt, config.outputDir, i + 1);
       results.push(result);
       console.log(`  ✓ Saved: ${result.path}`);
@@ -241,14 +351,15 @@ async function generateImage(prompt, options = {}) {
 
   // Single-image path — byte-for-byte identical to pre-fix behaviour
   console.log(`\nGenerating image...`);
-  console.log(`  Model: ${config.model}`);
+  console.log(`  Model: ${resolved.model}`);
+  console.log(`  Base:  ${resolved.apiBase}`);
   console.log(`  Size: ${config.width}x${config.height}`);
   console.log(`  Style: ${config.style}`);
   console.log(`  Output: ${config.outputFormat}`);
   console.log(`  Dir: ${config.outputDir}`);
   console.log(`  Prompt: ${fullPrompt.substring(0, 100)}...`);
 
-  const response = await callApi(apiKey, fullPrompt, config);
+  const response = await callApi(resolved.apiKey, fullPrompt, config, resolved.apiBase);
   const result = saveImage(response.imageData, prompt, config.outputDir);
 
   console.log(`\n✓ Image saved: ${result.path}`);
@@ -256,10 +367,10 @@ async function generateImage(prompt, options = {}) {
 }
 
 /**
- * Real API call to agnes-image-2.1-flash
+ * Real API call against a vendor's OpenAI-compatible endpoint.
  */
-async function callApi(apiKey, prompt, options) {
-  const endpoint = `${API_BASE}/images/generations`;
+async function callApi(apiKey, prompt, options, apiBase = DEFAULTS.apiBase) {
+  const endpoint = `${apiBase}/images/generations`;
 
   // Build request body (OpenAI-compatible)
   const body = {
@@ -269,11 +380,6 @@ async function callApi(apiKey, prompt, options) {
     n: 1,
     response_format: 'b64_json'
   };
-
-  // Optional: style/quality via extra body fields
-  if (options.style && options.style !== 'photorealistic') {
-    body.style = options.style;
-  }
 
   console.log(`\nCalling: POST ${endpoint}`);
 
@@ -307,17 +413,21 @@ async function callApi(apiKey, prompt, options) {
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {};
+  let setup = false;
+  let test = false;
   let prompt = '';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
     if (arg === '--setup') {
-      return { setup: true };
+      setup = true;
+      continue;
     }
 
     if (arg === '--test') {
-      return { test: true };
+      test = true;
+      continue;
     }
 
     if (arg === '--width' && args[i + 1]) {
@@ -337,12 +447,23 @@ function parseArgs() {
       options.angleCount = parseInt(args[++i]);
     } else if (arg === '--model' && args[i + 1]) {
       options.model = args[++i];
+    } else if (arg === '--base' && args[i + 1]) {
+      options.base = args[++i];
+    } else if (arg === '--key' && args[i + 1]) {
+      options.key = args[++i];
+    } else if (arg === '--env' && args[i + 1]) {
+      options.envFile = args[++i];
     } else if (arg === '--output' && args[i + 1]) {
       options.outputDir = args[++i];
     } else if (!arg.startsWith('--')) {
       prompt += arg + ' ';
     }
   }
+
+  // setup/test take precedence; carry along any already-parsed options so that
+  // e.g. `--setup --key <val>` works regardless of flag ordering.
+  if (setup) return { setup: true, key: options.key, options };
+  if (test) return { test: true, options };
 
   return { prompt: prompt.trim(), options };
 }
@@ -368,6 +489,38 @@ async function runTests() {
   const apiKey = getApiKey();
   console.log(apiKey ? '  ✓ API key found' : '  ⚠ API key not configured (run --setup)');
 
+  // Test 4: vendor-agnostic config resolution (built-in agnes defaults)
+  console.log('\nTest 4: resolveConfig defaults');
+  const prevModel = process.env.IMAGE_MODEL;
+  const prevBase = process.env.IMAGE_API_BASE;
+  const prevKey = process.env.IMAGE_API_KEY;
+  delete process.env.IMAGE_MODEL;
+  delete process.env.IMAGE_API_BASE;
+  delete process.env.AGNES_API_BASE;
+  delete process.env.IMAGE_API_KEY;
+  delete process.env.AGNES_API_KEY;
+  const d = resolveConfig({});
+  const defaultOk = d.model === 'agnes-image-2.1-flash' && d.apiBase === 'https://api.agnes-ai.cn/v1';
+  console.log(defaultOk ? '  ✓ Defaults fall back to agnes model + base' : `  ✗ Unexpected defaults: ${d.model} ${d.apiBase}`);
+  if (prevModel !== undefined) process.env.IMAGE_MODEL = prevModel;
+  if (prevBase !== undefined) process.env.IMAGE_API_BASE = prevBase;
+  if (prevKey !== undefined) process.env.IMAGE_API_KEY = prevKey;
+
+  // Test 5: env > settings precedence (IMAGE_API_KEY wins over AGNES_API_KEY)
+  console.log('\nTest 5: env precedence');
+  process.env.AGNES_API_KEY = 'env-agnes-key';
+  process.env.IMAGE_API_KEY = 'env-generic-key';
+  const p5 = resolveConfig({});
+  console.log(p5.apiKey === 'env-generic-key' ? '  ✓ Generic env key beats agnes env key' : `  ✗ got ${p5.apiKey}`);
+
+  // Test 6: CLI option > env precedence (--key / --base / --model)
+  console.log('\nTest 6: CLI option precedence');
+  const p6 = resolveConfig({ key: 'cli-key', base: 'https://cli.example/v1', model: 'cli-model' });
+  const cliOk = p6.apiKey === 'cli-key' && p6.apiBase === 'https://cli.example/v1' && p6.model === 'cli-model';
+  console.log(cliOk ? '  ✓ CLI options beat env + defaults' : `  ✗ got ${p6.apiKey} ${p6.apiBase} ${p6.model}`);
+  delete process.env.AGNES_API_KEY;
+  delete process.env.IMAGE_API_KEY;
+
   console.log('\n=== Tests Complete ===\n');
 }
 
@@ -377,8 +530,16 @@ async function runTests() {
 async function main() {
   const parsed = parseArgs();
 
+  // Load an optional .env file before resolving config (env vars win over it
+  // only for keys not already present).
+  if (parsed.options && parsed.options.envFile) {
+    const { loaded, skipped } = loadEnvFile(parsed.options.envFile);
+    if (loaded.length) console.log(`Loaded env from ${parsed.options.envFile}: ${loaded.join(', ')}`);
+    if (skipped.length) console.log(`Kept existing env (skipped ${skipped.length}): ${skipped.join(', ')}`);
+  }
+
   if (parsed.setup) {
-    await setupApiKey();
+    await setupApiKey({ key: parsed.key });
     return;
   }
 
@@ -397,9 +558,12 @@ async function main() {
     console.log('  --no-hands     Disable hand rendering');
     console.log('  --fingers      Enhanced finger detail');
     console.log('  --multi-angle N Generate N different angles');
-    console.log('  --model ID       生成模型 (default: agnes-image-2.1-flash)');
+    console.log('  --model ID      生成模型 (default: agnes-image-2.1-flash, or IMAGE_MODEL)');
+    console.log('  --base URL      API 基础地址 (default: https://api.agnes-ai.cn/v1, or IMAGE_API_BASE)');
+    console.log('  --key VAL       API key (or set IMAGE_API_KEY / AGNES_API_KEY)');
+    console.log('  --env FILE      从 .env 文件加载配置(优先级低于已有 env)');
     console.log('  --output DIR     Output directory (default: ./output)');
-    console.log('  --setup        Configure API key');
+    console.log('  --setup        Configure API key (interactive, or pass --key)');
     console.log('  --test         Run tests');
     process.exit(1);
   }
@@ -417,4 +581,4 @@ if (require.main === module) {
   main().catch(console.error);
 }
 
-module.exports = { generateImage, setupApiKey, validateParameters, buildPrompt, getApiKey };
+module.exports = { generateImage, setupApiKey, validateParameters, buildPrompt, getApiKey, resolveConfig, readSettingsApiKey, loadEnvFile };

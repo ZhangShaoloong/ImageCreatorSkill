@@ -50,6 +50,9 @@ This will:
 | 手部 | `--no-hands` / `--fingers` | 显示 |
 | 多角度 | `--multi-angle N` | 单角度（默认） |
 | 模型 | `--model <id>` | agnes-image-2.1-flash |
+| API 基址 | `--base <url>` | https://api.agnes-ai.cn/v1 |
+| 密钥 | `--key <val>` | (未配置时报错) |
+| .env 文件 | `--env <file>` | 无 |
 | 输出目录 | `--output <dir>` | ./output |
 
 ### Basic Generation (All Defaults)
@@ -102,7 +105,8 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 **第 4 问 多角度** — 选项:单角度(默认) / 多角度 N 个
 - 选"多角度"时追问 N(≥1)。
 
-**第 5 问 模型** — 选项:agnes-image-2.1-flash(默认) / agnes-image-2.5-flash / 其他(手填模型 ID)
+**第 5 问 模型** — 选项:agnes-image-2.1-flash(默认) / agnes-image-2.5-flash / 其他(手填模型 ID)。
+切换到其它厂商时,同时设置 `--base`(或 `IMAGE_API_BASE`)指向你的 OpenAI 兼容后端。
 
 **第 6 问 确认** — 汇总全部参数,选项:直接生成 / 改一项 / 取消
 
@@ -139,8 +143,9 @@ Uses: 1920×1080, 16:9, photorealistic, hands shown, no multi-angle
 
 ### Missing API Key
 ```
-Error: AGNES_API_KEY not configured. Run: /t2i-setup
+Error: API key not configured. Set IMAGE_API_KEY (or AGNES_API_KEY), or run: /t2i-setup
 ```
+也可用 `--key <val>` 或 `--env <file>` 提供密钥;`--setup` 支持交互式输入真实 key。
 
 ### API Timeout
 - Retry up to 3 times with exponential backoff
@@ -197,15 +202,16 @@ Result: 1920×1080, 2D cartoon, no hands rendered
 2. **Parse parameters**: Extract flags from user input
 3. **Validate inputs**: Check parameter combinations
 4. **Generate prompt**: Combine description with style modifiers
-5. **Call API**: POST to agnes-image-2.1-flash endpoint
+5. **Call API**: POST to `{apiBase}/images/generations` (defaults to agnes)
 6. **Save result**: Store image locally with timestamp
 7. **Return path**: Provide full file path to user
 
 ## Dependencies
 
 - Node.js 18+ (for fetch API)
-- AGNES_API_KEY environment variable
-- Network access to agnes-image API
+- API key via `IMAGE_API_KEY` (or `AGNES_API_KEY`) environment variable, or `settings.local.json`
+- Vendor base URL via `IMAGE_API_BASE` / `--base` (defaults to agnes `https://api.agnes-ai.cn/v1`)
+- Network access to the configured image API
 
 ## Testing
 

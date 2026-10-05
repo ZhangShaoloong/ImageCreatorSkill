@@ -1,0 +1,17 @@
+{
+  "name": "local-image-creator",
+  "description": "Local image-creator plugin marketplace",
+  "owner": {
+    "name": "local"
+  },
+  "plugins": [
+    {
+      "name": "t2i-creator",
+      "source": "./skills/t2i-creator"
+    },
+    {
+      "name": "i2i-creator",
+      "source": "./skills/i2i-creator"
+    }
+  ]
+}

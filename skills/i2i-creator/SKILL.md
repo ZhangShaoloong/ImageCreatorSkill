@@ -51,6 +51,9 @@ This will:
 | 自定义尺寸 | `--width N --height N` | 1024×1024 |
 | 多变体 | `--variations N` | 1 |
 | 模型 | `--model <id>` | agnes-image-2.1-flash |
+| API 基址 | `--base <url>` | https://api.agnes-ai.cn/v1 |
+| 密钥 | `--key <val>` | (未配置时报错) |
+| .env 文件 | `--env <file>` | 无 |
 | 输出目录 | `--output <dir>` | ./output |
 
 ### Basic Edit (All Defaults)
@@ -92,7 +95,8 @@ Uses: 1024×1024, 1:1, photorealistic, strength 0.7, 1 variation.
 **第 4 问 多变体** — 选项:单张(默认) / 多张 N 个
 - 选"多张"时追问 N(≥1)。
 
-**第 5 问 模型** — 选项:agnes-image-2.1-flash(默认) / 其他(手填模型 ID)
+**第 5 问 模型** — 选项:agnes-image-2.1-flash(默认) / 其他(手填模型 ID)。
+切换到其它厂商时,同时设置 `--base`(或 `IMAGE_API_BASE`)指向你的 OpenAI 兼容后端。
 
 **第 6 问 确认** — 汇总全部参数,选项:直接生成 / 改一项 / 取消
 
@@ -138,8 +142,9 @@ Uses: 1024×1024, 1:1, photorealistic, strength 0.7, 1 variation.
 
 ### Missing API Key
 ```
-Error: AGNES_API_KEY not configured. Run: /i2i-setup
+Error: API key not configured. Set IMAGE_API_KEY (or AGNES_API_KEY), or run: /i2i-setup
 ```
+也可用 `--key <val>` 或 `--env <file>` 提供密钥;`--setup` 支持交互式输入真实 key。
 
 ### Missing / Bad Input Image
 - No `--input` → error before any API call
@@ -206,15 +211,16 @@ Result: 4 wide 16:9 night versions of the input scene.
 3. **Parse parameters**: Extract flags from user input
 4. **Validate inputs**: Check parameter combinations
 5. **Generate prompt**: Combine edit prompt with style + strength modifiers
-6. **Call API**: POST input + prompt to agnes-image-2.1-flash `/images/edits`
+6. **Call API**: POST input + prompt to `{apiBase}/images/edits` (defaults to agnes)
 7. **Save result**: Store edited image locally with timestamp
 8. **Return path**: Provide full file path to user
 
 ## Dependencies
 
 - Node.js 18+ (for fetch API)
-- AGNES_API_KEY environment variable
-- Network access to agnes-image API
+- API key via `IMAGE_API_KEY` (or `AGNES_API_KEY`) environment variable, or `settings.local.json`
+- Vendor base URL via `IMAGE_API_BASE` / `--base` (defaults to agnes `https://api.agnes-ai.cn/v1`)
+- Network access to the configured image API
 
 ## Testing
 
